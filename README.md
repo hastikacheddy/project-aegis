@@ -13,9 +13,9 @@ payment gateway (Mastercard averages ~130 ms).
                         ┌─────────────────────────────────────────────┐
  auth request ──────────►  SYNCHRONOUS SIEVE                          │
  (100–300 ms budget)    │  XGBoost + SMOTE + Platt calibration        ├──► APPROVE / DECLINE
-                        │  ~1 ms inference · clears 95%+ of traffic   │    (in-window)
+                        │  2 ms inference · clears 99.4% of traffic   │    (in-window)
                         └───────────────────┬─────────────────────────┘
-                                            │ ambiguity band: |P(fraud) − 0.5| < δ
+                                            │ ambiguity band: 0.6% of traffic, 65% of fraud
                                             ▼  (async queue — off the auth path)
                         ┌─────────────────────────────────────────────┐
                         │  QUANTUM ADJUDICATOR                        │
@@ -25,6 +25,16 @@ payment gateway (Mastercard averages ~130 ms).
                         │  PennyLane → Braket DM1 → IonQ Aria         │
                         └─────────────────────────────────────────────┘
 ```
+
+![Aegis dashboard](docs/dashboard-overview.png)
+
+The live demo, running against the trained models on the real ULB dataset. Green rows
+cleared the Synchronous Sieve in single-digit milliseconds; purple `Q-DECLINED` rows were
+too ambiguous to call, so they were routed to the Quantum Adjudicator and resolved
+out-of-band. The red dot in the TRUTH column is the ground-truth label, revealed only
+after the verdict. *(The demo feed is deliberately enriched with fraud and ambiguous
+cases for visibility, so the "cleared synchronously" figure here is far below the 99.4%
+measured on the real traffic distribution.)*
 
 ## Why this wins
 
@@ -64,11 +74,22 @@ and configure AWS credentials).
 | Stage | What | How |
 |---|---|---|
 | Sieve | Synchronous triage, ~1 ms | XGBoost (400 trees, hist) on SMOTE-balanced data, Platt-calibrated on a clean hold-out so the ambiguity band is defined on *real* probabilities |
-| Router | Ambiguity margin δ | `0.5 ± δ` on calibrated P(fraud); confident traffic never touches quantum |
+| Router | Ambiguity band, volume-budgeted | Thresholds are quantiles of the calibrated score: top 0.05% auto-decline, next 0.5% routed to quantum, rest auto-approve. (A fixed `0.5 ± δ` margin is nearly empty once scores are calibrated at 0.17% prevalence — budgeting by review capacity is also how issuers actually deploy score tiers.) |
 | Adjudicator | VQC + QAE, 4 qubits | Top-4 fraud-salient features → angle embedding → strongly-entangling layers. Dual loss `L = α·L_VQC + (1−α)·R_QAE`: the classifier learns known fraud typologies, the autoencoder learns the *legitimate* manifold so the model can't overfit 0.172% minority data |
 | Fusion | Mesh score | `w·quantum + (1−w)·sieve` inside the band, `w` selected on a validation split |
 | XAI | Quantum SHAP | Exact Shapley over all 2⁴ coalitions of the quantum features (batched circuit evaluation) |
 | Hardware | Braket path | Develop on local statevector → prototype on Braket **DM1** (noise-aware density matrix) → execute on **IonQ Aria** (built-in debiasing/sharpening) — swap with one `--backend` flag |
+
+### What an adjudication looks like
+
+![Quantum adjudication with SHAP attribution](docs/quantum-adjudication.png)
+
+An $88.23 transaction the sieve could not resolve. The VQC put it at 0.856, the QAE
+flagged it as 0.957 anomalous against the legitimate manifold, and the blended verdict
+declined it — correctly, as the ground truth confirms. The bars underneath are exact
+Shapley values over the four quantum features, so a model risk reviewer can see *why*
+the circuit decided what it did: V14 contributed +0.336, V10 +0.223. The whole
+adjudication took 99 ms, entirely off the authorization path.
 
 ## Results
 
@@ -85,6 +106,11 @@ held-out 20% stratified test set, seed 42):
 | Test AUPRC (ambiguity band) | 0.9402 | **0.9428** | +0.0026 |
 | Traffic cleared synchronously | — | **99.40%** | p50 **2.2 ms** |
 | Fraud concentrated in the band | — | **65.3%** of all fraud in **0.60%** of traffic | — |
+
+![Held-out test set evaluation](docs/evaluation-metrics.png)
+
+The dashboard reports the same held-out numbers live, read straight from
+`artifacts/metrics.json`.
 
 The routing is the point: the band holds 0.6% of transactions but **two-thirds of all
 fraud** — precisely the cases worth spending quantum compute on, and the quantum
@@ -126,9 +152,14 @@ aegis/            core library
   mesh.py         async mesh: routing, fusion, batch scoring
   data.py         OpenML loader + synthetic twin + stratified subsampling
   metrics.py      AUPRC-first evaluation + plots
-scripts/train.py  end-to-end pipeline → artifacts/
+scripts/
+  train.py              end-to-end pipeline → artifacts/
+  validate_braket.py    re-run trained circuits on Braket DM1 / IonQ Aria
+  capture_screenshots.py regenerate the README screenshots from the live demo
 app/server.py     FastAPI live demo (real models, async quantum worker)
 app/static/       dashboard (zero external deps — survives venue Wi-Fi)
+docs/             README screenshots
+artifacts/        metrics.json + plots (committed); models + demo pool (regenerated)
 ```
 
 ## The 3-minute demo script
