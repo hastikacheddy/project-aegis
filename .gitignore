@@ -6,3 +6,4 @@ artifacts/*.joblib
 artifacts/*.npz
 artifacts/demo_pool.csv
 .claude/
+demo-notes.md

@@ -1,13 +1,23 @@
-# Project Aegis — Asynchronous Quantum-Classical Mesh for Credit Card Fraud Detection
+# Project Aegis
 
-**Team Beerantum · HSBC Enterprise Challenge · 2026 Global Quantum + AI Challenge**
+Hybrid quantum-classical credit card fraud detection that keeps quantum inference off
+the synchronous authorization path.
 
-Credit card fraud cost the industry **$34B** in 2023 — but false declines cost **$443B**.
-State-of-the-art quantum fraud models can't be deployed: a deep parameterized quantum
-circuit plus cloud queuing can never fit the **100–300 ms** authorization window of a
-payment gateway (Mastercard averages ~130 ms).
+Team Beerantum — HSBC Enterprise Challenge, 2026 Global Quantum + AI Challenge.
 
-**Aegis decouples the quantum advantage from the synchronous authorization path.**
+## Problem
+
+Payment authorization runs on a hard latency budget: 100–300 ms end to end, with the
+Mastercard network averaging around 130 ms. Published quantum fraud models report
+competitive offline accuracy, but a parameterized quantum circuit plus cloud queuing
+does not fit inside that window. A design that places a QPU call in the authorization
+path is not deployable regardless of how well it scores.
+
+Aegis treats this as a routing problem rather than a circuit-depth problem. A calibrated
+classical model decides the traffic it is confident about, synchronously. The small
+fraction it cannot resolve is queued to a quantum adjudicator whose verdict returns
+out-of-band, where it drives post-authorization review, step-up authentication, or a
+settlement hold instead of the initial approve/decline.
 
 ```
                         ┌─────────────────────────────────────────────┐
@@ -28,26 +38,13 @@ payment gateway (Mastercard averages ~130 ms).
 
 ![Aegis dashboard](docs/dashboard-overview.png)
 
-The live demo, running against the trained models on the real ULB dataset. Green rows
-cleared the Synchronous Sieve in single-digit milliseconds; purple `Q-DECLINED` rows were
-too ambiguous to call, so they were routed to the Quantum Adjudicator and resolved
-out-of-band. The red dot in the TRUTH column is the ground-truth label, revealed only
-after the verdict. *(The demo feed is deliberately enriched with fraud and ambiguous
-cases for visibility, so the "cleared synchronously" figure here is far below the 99.4%
-measured on the real traffic distribution.)*
-
-## Why this wins
-
-1. **It's deployable.** Every published quantum fraud model we benchmarked against ignores
-   the latency constraint. Aegis meets it *by architecture*, not by shrinking the circuit.
-2. **The quantum model works where the classical model is blind.** The VQC + QAE only ever
-   sees the ambiguity band — the transactions where XGBoost's score carries the least
-   information. That is exactly where AUPRC uplift is cheapest to buy and worth the most.
-3. **It's governable.** Exact Shapley values over the quantum feature space (2^k coalitions,
-   no sampling error) translate the quantum latent space into the attribution format model
-   risk teams already consume.
-4. **It's honest.** Evaluation is AUPRC on a held-out stratified test set at true 0.172%
-   prevalence — the metric that can't be gamed by class imbalance.
+The demo dashboard, running the trained models against held-out transactions from the
+ULB dataset. Green rows cleared the sieve in single-digit milliseconds. Purple
+`Q-DECLINED` rows fell in the ambiguity band and were resolved by the quantum
+adjudicator asynchronously. The TRUTH column shows the ground-truth label, revealed
+after the verdict. Note that the demo feed is deliberately enriched with fraud and
+ambiguous cases so there is something to watch, so the "cleared synchronously" figure
+shown is much lower than the 99.4% measured on the real traffic distribution.
 
 ## Quickstart
 
@@ -55,129 +52,125 @@ measured on the real traffic distribution.)*
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 
-# 1. train everything (downloads the ULB/Kaggle dataset from OpenML; falls back
-#    to a synthetic statistical twin if offline)
+# train (downloads the ULB dataset from OpenML; falls back to a synthetic
+# statistical twin if the download is unavailable)
 .venv\Scripts\python scripts\train.py
 
-# 2. launch the live demo dashboard
+# run the demo dashboard
 .venv\Scripts\python -m uvicorn app.server:app --port 8021
-# open http://localhost:8021
+# http://localhost:8021
 ```
 
-Useful flags: `--quick` (smoke test), `--synthetic` (force offline dataset),
-`--epochs N`, `--backend braket-dm1|ionq-aria` (real quantum backends via the
-Amazon Braket PennyLane plugin — uncomment the two lines in requirements.txt
-and configure AWS credentials).
+Flags: `--quick` (reduced settings for a smoke test), `--synthetic` (force the offline
+dataset), `--epochs N`, `--backend braket-dm1|ionq-aria`.
 
 ## Architecture
 
 | Stage | What | How |
 |---|---|---|
-| Sieve | Synchronous triage, ~1 ms | XGBoost (400 trees, hist) on SMOTE-balanced data, Platt-calibrated on a clean hold-out so the ambiguity band is defined on *real* probabilities |
-| Router | Ambiguity band, volume-budgeted | Thresholds are quantiles of the calibrated score: top 0.05% auto-decline, next 0.5% routed to quantum, rest auto-approve. (A fixed `0.5 ± δ` margin is nearly empty once scores are calibrated at 0.17% prevalence — budgeting by review capacity is also how issuers actually deploy score tiers.) |
-| Adjudicator | VQC + QAE, 4 qubits | Top-4 fraud-salient features → angle embedding → strongly-entangling layers. Dual loss `L = α·L_VQC + (1−α)·R_QAE`: the classifier learns known fraud typologies, the autoencoder learns the *legitimate* manifold so the model can't overfit 0.172% minority data |
-| Fusion | Mesh score | `w·quantum + (1−w)·sieve` inside the band, `w` selected on a validation split |
-| XAI | Quantum SHAP | Exact Shapley over all 2⁴ coalitions of the quantum features (batched circuit evaluation) |
-| Hardware | Braket path | Develop on local statevector → prototype on Braket **DM1** (noise-aware density matrix) → execute on **IonQ Aria** (built-in debiasing/sharpening) — swap with one `--backend` flag |
+| Sieve | Synchronous triage, ~2 ms | XGBoost (400 trees, hist) on SMOTE-balanced data, Platt-calibrated on a clean hold-out so routing thresholds are defined on real probabilities |
+| Router | Ambiguity band, volume-budgeted | Thresholds are quantiles of the calibrated score: top 0.05% auto-decline, next 0.5% routed to quantum, rest auto-approve. A fixed `0.5 ± δ` margin is nearly empty once scores are calibrated at 0.17% prevalence; budgeting by review capacity also matches how issuers deploy score tiers |
+| Adjudicator | VQC + QAE, 4 qubits | Top-4 fraud-salient features → angle embedding → strongly-entangling layers. Dual loss `L = α·L_VQC + (1−α)·R_QAE`: the classifier learns labelled fraud typologies, the autoencoder learns the legitimate manifold, which limits overfitting to a 0.172% minority class |
+| Fusion | Mesh score | `w·quantum + (1−w)·sieve` inside the band, `w` selected on a validation split. Scores are rank-rescaled back into the band interval, so adjudication reorders within the band and cannot alter the ordering outside it |
+| XAI | Quantum SHAP | Exact Shapley values over all 2⁴ coalitions of the quantum features, batched into a single circuit evaluation |
+| Hardware | Braket path | Local statevector for development, Braket DM1 (noise-aware density matrix) for prototyping, IonQ Aria for execution — selected with `--backend` |
 
-### What an adjudication looks like
+### An adjudicated transaction
 
 ![Quantum adjudication with SHAP attribution](docs/quantum-adjudication.png)
 
-An $88.23 transaction the sieve could not resolve. The VQC put it at 0.856, the QAE
-flagged it as 0.957 anomalous against the legitimate manifold, and the blended verdict
-declined it — correctly, as the ground truth confirms. The bars underneath are exact
-Shapley values over the four quantum features, so a model risk reviewer can see *why*
-the circuit decided what it did: V14 contributed +0.336, V10 +0.223. The whole
-adjudication took 99 ms, entirely off the authorization path.
+An $88.23 transaction the sieve scored inside the ambiguity band. The VQC put it at
+0.856, the QAE scored it 0.957 anomalous against the legitimate manifold, and the
+blended verdict declined it; the ground-truth label confirms fraud. The lower bars are
+exact Shapley values over the four quantum features, giving a reviewer a per-feature
+account of the circuit's output. The adjudication took 99 ms, off the authorization
+path.
 
 ## Results
 
-Run `scripts/train.py` — all numbers below are reproduced into `artifacts/metrics.json`
-and the plots in `artifacts/plots/` (PR curves overall + band-only, latency histogram,
-score-shift scatter, quantum loss curve).
-
-Verified run on the **real ULB dataset** (284,807 transactions, 0.1727% fraud,
-held-out 20% stratified test set, seed 42):
+Trained on the ULB European Cardholder dataset (284,807 transactions, 0.1727% fraud),
+evaluated on a held-out 20% stratified test split, seed 42. AUPRC is the reported
+metric; at this prevalence AUC-ROC is close to uninformative.
 
 | Metric | Classical sieve | Aegis mesh | Δ |
 |---|---|---|---|
-| Test AUPRC (full) | 0.8795 | **0.8808** | +0.0013 |
-| Test AUPRC (ambiguity band) | 0.9402 | **0.9428** | +0.0026 |
-| Traffic cleared synchronously | — | **99.40%** | p50 **2.2 ms** |
-| Fraud concentrated in the band | — | **65.3%** of all fraud in **0.60%** of traffic | — |
+| Test AUPRC (full) | 0.8795 | 0.8808 | +0.0013 |
+| Test AUPRC (ambiguity band) | 0.9402 | 0.9428 | +0.0026 |
+| Traffic cleared synchronously | — | 99.40% | p50 2.2 ms |
+| Fraud falling in the band | — | 65.3% of all fraud in 0.60% of traffic | — |
 
 ![Held-out test set evaluation](docs/evaluation-metrics.png)
 
-The dashboard reports the same held-out numbers live, read straight from
-`artifacts/metrics.json`.
+The overall AUPRC difference is small. XGBoost is already strong on this dataset, and
+because the mesh only reorders within the band, the ceiling on any change to the full
+test metric is bounded by the band's size. The result worth reporting is the routing
+one: 0.6% of transactions carry 65.3% of the fraud, which is what makes selective
+quantum adjudication affordable at all.
 
-The routing is the point: the band holds 0.6% of transactions but **two-thirds of all
-fraud** — precisely the cases worth spending quantum compute on, and the quantum
-adjudication is strictly additive (the mesh can reorder only inside the band, so it can
-never damage the classical model where it is already confident). Quantum SHAP
-attributions are exact (Shapley efficiency gap ~1e-17, machine precision).
+On the synthetic twin (`--synthetic`), whose fraud mixture contains non-linear
+signatures that trees fit poorly, the band AUPRC gain is larger (0.841 → 0.874). That
+dataset is generated, not observed, so it indicates where the approach has headroom
+rather than evidencing a result.
 
-Numbers regenerate on every training run (`scripts/train.py`); the synthetic twin
-(`--synthetic`) shows a larger relative uplift (band AUPRC 0.841 → 0.874) because its
-fraud mixture is deliberately built to contain non-linear signatures the trees miss.
+Every figure regenerates from `scripts/train.py` into `artifacts/metrics.json`, with
+precision-recall curves, a latency histogram, a band score-shift scatter, and the
+quantum loss curve written to `artifacts/plots/`.
 
-## Running on real quantum hardware (Amazon Braket)
+## Limitations
 
-Training always stays local. Hardware is for *validation* — proving the trained
-circuits behave on a noise-aware simulator and a real QPU:
+- Circuits run on a local statevector simulator. Nothing here has been executed on
+  Braket or on real hardware yet; `scripts/validate_braket.py` is written for that but
+  has not been run against AWS.
+- The adjudicator uses 4 qubits and 3 layers, trained on a few hundred ambiguous
+  transactions. This is a small circuit on a small sample, not a demonstration of
+  quantum advantage.
+- Routing thresholds, blend weight, and verdict threshold are fitted on training and
+  validation splits. The test split is untouched, but the band is narrow enough that
+  band-level metrics rest on 344 transactions and 64 frauds.
+- The dataset's features are PCA components, so SHAP attributions name `V14` and `V10`
+  rather than anything a human recognises. Real deployment would need the underlying
+  feature space.
 
-1. AWS account with Braket enabled (console → Amazon Braket → accept terms &
-   enable third-party devices). Region **us-east-1** for IonQ. Ask the hackathon
-   organisers about AWS credits first.
-2. IAM user with the `AmazonBraketFullAccess` policy → access keys → `aws configure`.
-3. Uncomment the two Braket lines in `requirements.txt`, `pip install -r requirements.txt`.
-4. Validate on the DM1 density-matrix simulator (pennies):
-   `python scripts/validate_braket.py --backend braket-dm1`
-5. Optional flex: a couple of adjudications on the real IonQ Aria QPU
-   (~$30/circuit at 1000 shots — mind the budget, mind the availability window):
+## Running on Amazon Braket
+
+Training stays local. Braket is used to validate that the trained circuits behave the
+same on a noise-aware simulator and on hardware.
+
+1. Enable Braket in the AWS console, including third-party device access. Use
+   `us-east-1` for IonQ.
+2. Create an IAM user with `AmazonBraketFullAccess`, then `aws configure`.
+3. Uncomment the Braket lines in `requirements.txt` and reinstall.
+4. Validate on the DM1 simulator: `python scripts/validate_braket.py --backend braket-dm1`
+5. Optionally run a few adjudications on IonQ Aria. This costs roughly $30 per circuit
+   at 1000 shots and is gated behind an explicit flag:
    `python scripts/validate_braket.py --backend ionq-aria --confirm --n 2`
 
-The script reports local-vs-Braket score agreement into
-`artifacts/braket_validation_*.json` — screenshot the Braket console task list
-for the deck.
+The script writes local-vs-Braket score agreement to `artifacts/braket_validation_*.json`.
 
 ## Repo layout
 
 ```
-aegis/            core library
-  classical.py    SMOTE + XGBoost + Platt calibration (the Sieve)
-  quantum.py      VQC + QAE dual-loss Adjudicator (PennyLane, Braket-ready)
+aegis/
+  classical.py    SMOTE + XGBoost + Platt calibration (the sieve)
+  quantum.py      VQC + QAE dual-loss adjudicator (PennyLane, Braket-ready)
   qshap.py        exact Quantum SHAP
-  mesh.py         async mesh: routing, fusion, batch scoring
-  data.py         OpenML loader + synthetic twin + stratified subsampling
-  metrics.py      AUPRC-first evaluation + plots
+  mesh.py         routing, fusion, batch scoring
+  data.py         OpenML loader, synthetic twin, stratified subsampling
+  metrics.py      AUPRC evaluation and plots
 scripts/
-  train.py              end-to-end pipeline → artifacts/
-  validate_braket.py    re-run trained circuits on Braket DM1 / IonQ Aria
-  capture_screenshots.py regenerate the README screenshots from the live demo
-app/server.py     FastAPI live demo (real models, async quantum worker)
-app/static/       dashboard (zero external deps — survives venue Wi-Fi)
+  train.py                end-to-end pipeline → artifacts/
+  validate_braket.py      re-run trained circuits on Braket DM1 / IonQ Aria
+  capture_screenshots.py  regenerate the README screenshots
+app/
+  server.py       FastAPI demo server (real models, async quantum worker)
+  static/         dashboard, no external dependencies
 docs/             README screenshots
-artifacts/        metrics.json + plots (committed); models + demo pool (regenerated)
+artifacts/        metrics.json and plots are committed; models and demo pool are regenerated
 ```
-
-## The 3-minute demo script
-
-1. **Open the dashboard.** "Every row is a real model inference. Green rows cleared in
-   ~1 ms — that's 95%+ of traffic, decided inside the Mastercard window."
-2. **Point at a purple QUANTUM badge.** "The sieve said *I don't know* — score in the
-   ambiguity band. It was provisionally approved in-window and queued. One second later
-   the VQC + QAE verdict lands, out-of-band, with exact Shapley attribution a regulator
-   can read."
-3. **Click *inject fraud* a few times.** Watch blatant fraud die in the sieve and subtle
-   fraud get caught by the adjudicator.
-4. **Point at the metrics panel.** "Same AUPRC everywhere the classical model is confident;
-   uplift concentrated in the band — quantum compute spent only where it buys detection."
 
 ## References
 
-Proposal: `Project_Aegis_Beerantum_Proposal_v3.pdf` — Nilson Report 2025 · Aite-Novarica
-2019 · Mastercard 2012 · Deotte 2019 (IEEE-CIS) · Dal Pozzolo 2015 (ULB dataset) ·
-Karimi 2024 (VQC) · Deloitte+AWS 2024 (hybrid QNN on Braket) · Sakhnenko 2021 (QAE) ·
-AWS Braket DM1 & IonQ Aria docs.
+Nilson Report 2025 · Aite-Novarica 2019 · Mastercard 2012 · Deotte 2019 (IEEE-CIS) ·
+Dal Pozzolo et al. 2015 (ULB dataset) · Karimi et al. 2024 (VQC) · Deloitte + AWS 2024
+(hybrid QNN on Braket) · Sakhnenko et al. 2021 (QAE) · AWS Braket DM1 and IonQ Aria
+documentation.
