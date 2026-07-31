@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Aegis — Quantum-Classical Fraud Mesh</title>
+<style>
+  :root {
+    --bg: #070b14;
+    --panel: #0e1526;
+    --panel2: #121b30;
+    --border: #1e2a45;
+    --text: #cbd5e1;
+    --dim: #64748b;
+    --cyan: #22d3ee;
+    --purple: #a78bfa;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: radial-gradient(1200px 600px at 70% -10%, #101a33 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 18px 22px 40px;
+  }
+  .mono { font-family: "Cascadia Code", Consolas, monospace; }
+
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    display: grid; place-items: center; font-size: 22px; color: #06121f; font-weight: 800;
+  }
+  h1 { font-size: 19px; color: #fff; letter-spacing: 0.4px; }
+  h1 span { color: var(--cyan); }
+  .subtitle { font-size: 11.5px; color: var(--dim); }
+  .chips { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-size: 10.5px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--dim);
+  }
+  .chip.live { border-color: #14532d; color: var(--green); }
+  .chip.live::before { content: "●"; margin-right: 5px; animation: pulse 1.6s infinite; }
+  .chip.q { border-color: #3b2a6d; color: var(--purple); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .kpi .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); }
+  .kpi .value { font-size: 22px; font-weight: 700; color: #fff; margin-top: 4px; }
+  .kpi .value small { font-size: 11px; color: var(--dim); font-weight: 400; }
+  .kpi.accent .value { color: var(--cyan); }
+  .kpi.qaccent .value { color: var(--purple); }
+  .kpi.good .value { color: var(--green); }
+
+  .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 16px; overflow: hidden;
+  }
+  .panel h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--dim); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .panel h2 .right { margin-left: auto; display: flex; gap: 6px; }
+
+  button {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 12px; font-size: 11px; cursor: pointer;
+  }
+  button:hover { border-color: var(--cyan); color: var(--cyan); }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: var(--dim); font-size: 10px; text-transform: uppercase;
+       letter-spacing: 0.8px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 6px 8px; border-bottom: 1px solid #131c31; }
+  tr.new-row { animation: slidein 0.4s ease; }
+  @keyframes slidein { from { opacity: 0; transform: translateY(-6px); } }
+
+  .badge { font-size: 10px; padding: 3px 9px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  .b-approve  { background: #052e1f; color: var(--green); border: 1px solid #14532d; }
+  .b-decline  { background: #3f1120; color: var(--red); border: 1px solid #7f1d2d; }
+  .b-pending  { background: #251a47; color: var(--purple); border: 1px solid #4c3390; }
+  .b-pending::after { content: " ⏳"; }
+  .b-qapprove { background: #0b2b3a; color: var(--cyan); border: 1px solid #155e75; }
+  .b-qdecline { background: #37103f; color: #e879f9; border: 1px solid #86198f; }
+
+  .truth { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .truth.fraud { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .truth.legit { background: #334155; }
+
+  .pipeline { display: flex; align-items: stretch; gap: 0; margin: 6px 0 2px; }
+  .stage { flex: 1; background: var(--panel2); border: 1px solid var(--border);
+           border-radius: 10px; padding: 10px 12px; text-align: center; position: relative; }
+  .stage .name { font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .stage .num { font-size: 19px; font-weight: 700; color: #fff; margin-top: 3px; }
+  .stage .sub { font-size: 9.5px; color: var(--dim); margin-top: 2px; }
+  .stage.q { border-color: #3b2a6d; }
+  .stage.q .num { color: var(--purple); }
+  .arrow { display: grid; place-items: center; padding: 0 8px; color: var(--dim); font-size: 16px; }
+
+  .adjcard { background: var(--panel2); border: 1px solid #3b2a6d; border-radius: 12px;
+             padding: 12px 14px; margin-bottom: 10px; }
+  .adjhead { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 8px; }
+  .adjhead .amt { color: #fff; font-weight: 700; }
+  .scorebar-row { display: flex; align-items: center; gap: 8px; font-size: 10.5px; margin: 4px 0; }
+  .scorebar-row .lbl { width: 92px; color: var(--dim); text-align: right; }
+  .scorebar-row .val { width: 46px; color: var(--text); }
+  .bar { flex: 1; height: 8px; background: #0a0f1d; border-radius: 4px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 4px; transition: width 0.5s; }
+
+  .shap { margin-top: 8px; }
+  .shap-row { display: flex; align-items: center; gap: 8px; font-size: 10.5px; margin: 3px 0; }
+  .shap-row .fname { width: 46px; text-align: right; color: var(--dim); }
+  .shap-axis { flex: 1; position: relative; height: 12px; background: #0a0f1d; border-radius: 3px; }
+  .shap-axis::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+                       width: 1px; background: var(--border); }
+  .shap-seg { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; }
+  .shap-val { width: 52px; }
+
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mbox { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+          padding: 10px 12px; }
+  .mbox .t { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.8px; }
+  .mbox .v { font-size: 18px; color: #fff; font-weight: 700; margin-top: 3px; }
+  .mbox .d { font-size: 10px; margin-top: 2px; }
+  .up { color: var(--green); } .down { color: var(--red); }
+
+  .footnote { font-size: 10px; color: var(--dim); margin-top: 10px; line-height: 1.5; }
+  .empty { color: var(--dim); font-size: 12px; text-align: center; padding: 24px 0; }
+
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Æ</div>
+  <div>
+    <h1>PROJECT <span>AEGIS</span></h1>
+    <div class="subtitle">Asynchronous Quantum-Classical Mesh &middot; Credit Card Fraud Detection &middot; Team Beerantum</div>
+  </div>
+  <div class="chips">
+    <div class="chip live">LIVE FEED</div>
+    <div class="chip q" id="chip-backend">VQC + QAE &middot; 4 qubits</div>
+    <div class="chip q">Target: IonQ Aria via Braket</div>
+    <div class="chip" id="chip-dataset">dataset: —</div>
+  </div>
+</header>
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Transactions</div><div class="value" id="k-total">0</div></div>
+  <div class="kpi accent"><div class="label">Cleared synchronously</div><div class="value" id="k-sync">—</div></div>
+  <div class="kpi accent"><div class="label">Sieve latency p50 / p99</div><div class="value" id="k-lat">—</div></div>
+  <div class="kpi qaccent"><div class="label">Quantum queue</div><div class="value" id="k-queue">0</div></div>
+  <div class="kpi good"><div class="label">Frauds blocked</div><div class="value" id="k-blocked">0</div></div>
+  <div class="kpi"><div class="label">False declines</div><div class="value" id="k-fd">0</div></div>
+</div>
+
+<div class="panel" style="margin-bottom:12px;">
+  <h2>Mesh pipeline</h2>
+  <div class="pipeline">
+    <div class="stage">
+      <div class="name">Payment gateway feed</div>
+      <div class="num" id="p-in">0</div>
+      <div class="sub">auth requests</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="name">Synchronous Sieve · XGBoost + SMOTE</div>
+      <div class="num" id="p-sieve">0</div>
+      <div class="sub" id="p-sieve-sub">approve / decline &lt; 50 ms</div>
+    </div>
+    <div class="arrow">⇢</div>
+    <div class="stage q">
+      <div class="name">Async Quantum Adjudicator · VQC + QAE</div>
+      <div class="num" id="p-q">0</div>
+      <div class="sub">ambiguity band <span id="p-band">—</span> · out-of-band verdict</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Live authorization stream
+      <span class="right">
+        <button onclick="inject('legit')">+ inject legit</button>
+        <button style="border-color:#4c3390;color:var(--purple)" onclick="inject('band')">+ inject ambiguous</button>
+        <button class="danger" onclick="inject('fraud')">+ inject fraud</button>
+      </span>
+    </h2>
+    <table>
+      <thead><tr>
+        <th>Txn</th><th>Time</th><th>Amount</th><th>Sieve P(fraud)</th>
+        <th>Latency</th><th>Status</th><th>Truth</th>
+      </tr></thead>
+      <tbody id="feed"><tr><td colspan="7" class="empty">waiting for feed…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div>
+    <div class="panel" style="margin-bottom:12px;">
+      <h2>Quantum adjudications <span class="right mono" style="color:var(--dim);font-size:10px" id="adj-count"></span></h2>
+      <div id="adjudications"><div class="empty">no ambiguous transactions yet — the sieve is clearing traffic</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Offline evaluation (held-out test set)</h2>
+      <div class="metrics-grid" id="metrics-grid"></div>
+      <div class="footnote" id="metrics-note"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footnote" style="margin-top:14px">
+  Demo feed is enriched to ~8% fraud for visibility (real prevalence: 0.172%). Every score shown is produced live by the trained models —
+  the sieve runs in-process per transaction; ambiguous cases run the PennyLane VQC + QAE circuits plus exact Quantum SHAP in an async worker,
+  exactly as they would run against Amazon Braket DM1 / IonQ Aria in production.
+</div>
+
+<script>
+const $$ = id => document.getElementById(id);
+const fmt = (x, d=4) => x == null ? "—" : Number(x).toFixed(d);
+const pct = x => x == null ? "—" : (100 * x).toFixed(1) + "%";
+
+const BADGES = {
+  "APPROVE":   ["b-approve",  "APPROVED"],
+  "DECLINE":   ["b-decline",  "DECLINED"],
+  "Q_PENDING": ["b-pending",  "QUANTUM"],
+  "Q_APPROVE": ["b-qapprove", "Q-APPROVED"],
+  "Q_DECLINE": ["b-qdecline", "Q-DECLINED"],
+  "Q_ERROR":   ["b-decline",  "ERROR"],
+};
+
+let knownIds = new Set();
+
+function bar(label, value, color, max=1) {
+  const w = Math.min(100, 100 * Math.max(0, value) / max);
+  return `<div class="scorebar-row">
+    <span class="lbl">${label}</span>
+    <div class="bar"><i style="width:${w}%;background:${color}"></i></div>
+    <span class="val mono">${fmt(value, 3)}</span>
+  </div>`;
+}
+
+function shapRows(shap) {
+  const entries = Object.entries(shap.phi);
+  const maxAbs = Math.max(0.02, ...entries.map(([, v]) => Math.abs(v)));
+  return entries.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).map(([name, v]) => {
+    const w = 50 * Math.abs(v) / maxAbs;
+    const seg = v >= 0
+      ? `<i class="shap-seg" style="left:50%;width:${w}%;background:var(--red)"></i>`
+      : `<i class="shap-seg" style="right:50%;width:${w}%;background:var(--cyan)"></i>`;
+    return `<div class="shap-row">
+      <span class="fname mono">${name}</span>
+      <div class="shap-axis">${seg}</div>
+      <span class="shap-val mono" style="color:${v >= 0 ? 'var(--red)' : 'var(--cyan)'}">${v >= 0 ? '+' : ''}${fmt(v, 3)}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderAdjudications(list) {
+  $$("adj-count").textContent = list.length ? `showing ${Math.min(2, list.length)} most recent` : "";
+  if (!list.length) return;
+  $$("adjudications").innerHTML = list.slice(0, 2).map(a => `
+    <div class="adjcard">
+      <div class="adjhead">
+        <span class="mono" style="color:var(--purple)">${a.id}</span>
+        <span class="amt">$${a.amount.toLocaleString()}</span>
+        <span class="badge ${a.verdict === "DECLINE" ? "b-qdecline" : "b-qapprove"}">${a.verdict === "DECLINE" ? "Q-DECLINED" : "Q-APPROVED"}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--dim)">${a.adjudication_ms} ms async ·
+          truth: <span style="color:${a.truth ? 'var(--red)' : 'var(--green)'}">${a.truth ? "FRAUD" : "LEGIT"}</span></span>
+      </div>
+      ${bar("sieve P", a.p_sieve, "var(--cyan)")}
+      ${bar("VQC P(fraud)", a.p_vqc, "var(--purple)")}
+      ${bar("QAE anomaly", a.anomaly, "var(--amber)")}
+      ${bar("final score", a.final_score, a.final_score >= 0.5 ? "var(--red)" : "var(--green)")}
+      <div class="shap">
+        <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
+          Quantum SHAP — exact Shapley attribution (base ${fmt(a.shap.base_value, 3)})</div>
+        ${shapRows(a.shap)}
+      </div>
+    </div>`).join("");
+}
+
+function renderMetrics(m) {
+  if (!m || !m.mesh) return;
+  const band = m.ambiguity_band || {};
+  const uplift = m.mesh.auprc_uplift;
+  const bandUplift = (band.mesh_auprc != null && band.sieve_auprc != null)
+    ? band.mesh_auprc - band.sieve_auprc : null;
+  $$("metrics-grid").innerHTML = `
+    <div class="mbox"><div class="t">Sieve AUPRC</div><div class="v mono">${fmt(m.sieve.test_auprc)}</div>
+      <div class="d">classical baseline</div></div>
+    <div class="mbox"><div class="t">Mesh AUPRC</div><div class="v mono" style="color:var(--purple)">${fmt(m.mesh.test_auprc)}</div>
+      <div class="d ${uplift >= 0 ? 'up' : 'down'}">${uplift >= 0 ? "▲" : "▼"} ${fmt(Math.abs(uplift))} vs baseline</div></div>
+    <div class="mbox"><div class="t">Band AUPRC — sieve</div><div class="v mono">${fmt(band.sieve_auprc)}</div>
+      <div class="d">${band.n ?? "—"} ambiguous txns, ${band.n_fraud ?? "—"} fraud</div></div>
+    <div class="mbox"><div class="t">Band AUPRC — mesh</div><div class="v mono" style="color:var(--purple)">${fmt(band.mesh_auprc)}</div>
+      <div class="d ${bandUplift >= 0 ? 'up' : 'down'}">${bandUplift == null ? "" : (bandUplift >= 0 ? "▲ +" : "▼ ") + fmt(bandUplift) + " where it matters"}</div></div>`;
+  const q = m.quantum || {};
+  $$("metrics-note").textContent =
+    `Quantum Adjudicator: ${q.n_qubits} qubits × ${q.n_layers} layers, dual loss α=${q.alpha}, ` +
+    `trained on ${q.train_size} stratified ambiguous txns (${q.epochs} epochs, backend: ${q.backend}). ` +
+    `Evaluation metric: AUPRC — the correct choice at ${pct(m.dataset.fraud_rate)} prevalence.`;
+  $$("chip-dataset").textContent = `dataset: ${m.dataset.source} · ${m.dataset.rows.toLocaleString()} rows`;
+  if (q.n_qubits) $$("chip-backend").textContent = `VQC + QAE · ${q.n_qubits} qubits · α=${q.alpha}`;
+}
+
+function render(s) {
+  const st = s.stats;
+  $$("k-total").textContent = st.total.toLocaleString();
+  $$("k-sync").textContent = pct(st.sync_cleared_pct);
+  $$("k-lat").innerHTML = `${st.latency_p50.toFixed(1)} <small>/ ${st.latency_p99.toFixed(1)} ms</small>`;
+  $$("k-queue").textContent = s.queue_depth;
+  $$("k-blocked").textContent = st.frauds_blocked;
+  $$("k-fd").textContent = st.false_declines;
+
+  $$("p-in").textContent = st.total.toLocaleString();
+  $$("p-sieve").textContent = (st.approved + st.declined - st.adjudicated).toLocaleString();
+  $$("p-q").textContent = `${st.adjudicated} / ${st.queued}`;
+  if (s.band && s.band[0] != null)
+    $$("p-band").textContent = `(${s.band[0].toFixed(3)}–${s.band[1].toFixed(3)})`;
+
+  const rows = s.txns.map(t => {
+    const [cls, label] = BADGES[t.status] || ["", t.status];
+    const isNew = !knownIds.has(t.id);
+    const finalCell = t.final_score != null
+      ? ` <span class="mono" style="color:var(--purple)">→ ${fmt(t.final_score, 3)}</span>` : "";
+    return `<tr class="${isNew ? "new-row" : ""}">
+      <td class="mono" style="color:var(--dim)">${t.id}</td>
+      <td class="mono">${t.ts}</td>
+      <td class="mono">$${t.amount.toLocaleString()}</td>
+      <td class="mono">${fmt(t.p_sieve, 3)}${finalCell}</td>
+      <td class="mono" style="color:${t.latency_ms < 50 ? "var(--green)" : "var(--amber)"}">${t.latency_ms.toFixed(1)} ms</td>
+      <td><span class="badge ${cls}">${label}</span></td>
+      <td><span class="truth ${t.truth ? "fraud" : "legit"}" title="${t.truth ? "actual fraud" : "legitimate"}"></span></td>
+    </tr>`;
+  }).join("");
+  $$("feed").innerHTML = rows || `<tr><td colspan="7" class="empty">waiting for feed…</td></tr>`;
+  knownIds = new Set(s.txns.map(t => t.id));
+
+  renderAdjudications(s.adjudications);
+  renderMetrics(s.metrics);
+}
+
+async function tick() {
+  try {
+    const r = await fetch("/api/state");
+    render(await r.json());
+  } catch (e) { /* server restarting */ }
+}
+
+async function inject(kind) {
+  await fetch(`/api/inject/${kind}`, { method: "POST" });
+  tick();
+}
+
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

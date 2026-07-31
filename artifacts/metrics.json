@@ -1,0 +1,53 @@
+{
+  "dataset": {
+    "source": "cache",
+    "rows": 284807,
+    "fraud": 492,
+    "fraud_rate": 0.001727485630620034
+  },
+  "sieve": {
+    "test_auprc": 0.879482447317099,
+    "latency": {
+      "p50_ms": 2.2238497622311115,
+      "p95_ms": 5.090149631723761,
+      "p99_ms": 10.336844362318516,
+      "max_ms": 11.665199883282185,
+      "n": 400
+    }
+  },
+  "mesh": {
+    "test_auprc": 0.8808165620402049,
+    "auprc_uplift": 0.0013341147231058503,
+    "routed_pct": 0.006039113795161687,
+    "cleared_sync_pct": 0.9939608862048384,
+    "band": [
+      0.008998408913612366,
+      0.9922804832458496
+    ],
+    "blend_w": 0.25
+  },
+  "ambiguity_band": {
+    "sieve_auprc": 0.9402066238159641,
+    "quantum_auprc": 0.7302240428115372,
+    "mesh_auprc": 0.9427616260505018,
+    "n": 344,
+    "n_fraud": 64
+  },
+  "quantum": {
+    "n_qubits": 4,
+    "n_layers": 3,
+    "alpha": 0.6,
+    "features": [
+      "V10",
+      "V14",
+      "V17",
+      "V12"
+    ],
+    "train_size": 450,
+    "epochs": 60,
+    "final_loss": 0.3929693029137457,
+    "backend": "local",
+    "hardware_target": "IonQ Aria (via Amazon Braket, DM1 for prototyping)"
+  },
+  "train_seconds": 45.95717239379883
+}

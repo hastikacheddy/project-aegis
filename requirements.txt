@@ -1,0 +1,15 @@
+numpy>=2.0,<2.6
+pandas>=2.1
+scikit-learn>=1.4
+imbalanced-learn>=0.12
+xgboost>=2.0
+pennylane>=0.35
+matplotlib>=3.8
+fastapi>=0.110
+uvicorn>=0.29
+joblib>=1.3
+
+# --- Optional: real quantum hardware via Amazon Braket ---
+# Uncomment to run the Adjudicator on Braket DM1 / IonQ Aria (needs AWS creds):
+# amazon-braket-sdk>=1.73
+# amazon-braket-pennylane-plugin>=1.27
