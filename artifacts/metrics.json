@@ -8,10 +8,10 @@
   "sieve": {
     "test_auprc": 0.879482447317099,
     "latency": {
-      "p50_ms": 2.2238497622311115,
-      "p95_ms": 5.090149631723761,
-      "p99_ms": 10.336844362318516,
-      "max_ms": 11.665199883282185,
+      "p50_ms": 3.107599972281605,
+      "p95_ms": 5.089079972822217,
+      "p99_ms": 5.724965933477506,
+      "max_ms": 31.07550006825477,
       "n": 400
     }
   },
@@ -47,7 +47,7 @@
     "epochs": 60,
     "final_loss": 0.3929693029137457,
     "backend": "local",
-    "hardware_target": "IonQ Aria (via Amazon Braket, DM1 for prototyping)"
+    "hardware_target": "IonQ Forte (via Amazon Braket, DM1 for prototyping)"
   },
-  "train_seconds": 45.95717239379883
+  "train_seconds": 101.32924151420593
 }

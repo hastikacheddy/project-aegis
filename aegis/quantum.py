@@ -10,7 +10,7 @@
 
 Circuits run on PennyLane. The device is swappable: local statevector for
 development, Amazon Braket DM1 (noise-aware density matrix) for prototyping,
-IonQ Aria for hardware execution with built-in debiasing/sharpening.
+IonQ Forte for hardware execution.
 """
 
 from __future__ import annotations
@@ -24,9 +24,15 @@ import pennylane as qml
 from pennylane import numpy as pnp
 from sklearn.preprocessing import QuantileTransformer
 
+# Device ARNs are case sensitive and the roster changes: IonQ Aria, which the
+# original proposal targeted, has been retired from Braket. Verified against the
+# Braket supported-devices list on 2026-09-14.
 BRAKET_ARNS = {
+    "braket-sv1": "arn:aws:braket:::device/quantum-simulator/amazon/sv1",
     "braket-dm1": "arn:aws:braket:::device/quantum-simulator/amazon/dm1",
-    "ionq-aria": "arn:aws:braket:us-east-1::device/qpu/ionq/Aria-1",
+    "ionq-forte": "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1",
+    "iqm-garnet": "arn:aws:braket:eu-north-1::device/qpu/iqm/Garnet",
+    "rigetti-cepheus": "arn:aws:braket:us-west-1::device/qpu/rigetti/Cepheus-1-108Q",
 }
 
 
@@ -38,7 +44,8 @@ def make_device(n_qubits: int, backend: str = "local"):
         return qml.device(
             "braket.aws.qubit", device_arn=BRAKET_ARNS[backend], wires=n_qubits, shots=1000
         )
-    raise ValueError(f"unknown backend '{backend}' (use local | braket-dm1 | ionq-aria)")
+    raise ValueError(f"unknown backend '{backend}'; "
+                     f"use 'local' or one of {sorted(BRAKET_ARNS)}")
 
 
 class QuantumAdjudicator:

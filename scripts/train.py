@@ -66,7 +66,9 @@ def main():
     ap.add_argument("--synthetic", action="store_true", help="force synthetic twin dataset")
     ap.add_argument("--quick", action="store_true", help="fast smoke-test settings")
     ap.add_argument("--epochs", type=int, default=None)
-    ap.add_argument("--backend", default="local", help="local | braket-dm1 | ionq-aria")
+    ap.add_argument("--backend", default="local",
+                    help="local | braket-sv1 | braket-dm1 | ionq-forte | "
+                         "iqm-garnet | rigetti-cepheus")
     args = ap.parse_args()
 
     cfg = AegisConfig()
@@ -260,7 +262,7 @@ def main():
                     "train_size": int(len(yq_tr)), "epochs": cfg.epochs,
                     "final_loss": adjudicator.loss_history[-1] if adjudicator.loss_history else None,
                     "backend": args.backend,
-                    "hardware_target": "IonQ Aria (via Amazon Braket, DM1 for prototyping)"},
+                    "hardware_target": "IonQ Forte (via Amazon Braket, DM1 for prototyping)"},
         "train_seconds": time.time() - t_start,
     }
     save_metrics(metrics, ARTIFACTS / "metrics.json")

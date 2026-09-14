@@ -1,0 +1,125 @@
+{
+  "pricing_date": "2026-09-14",
+  "transactions": 1000000,
+  "shots": 1000,
+  "routed_fraction": 0.006039113795161687,
+  "adjudications": 6039.1137951616865,
+  "circuits_per_adjudication": 34,
+  "total_circuits": 205329.86903549734,
+  "sieve": {
+    "device": "c6i.xlarge",
+    "compute_hours": 0.863222214522668,
+    "per_transaction": 1.4674777646885356e-07,
+    "total": 0.14674777646885356
+  },
+  "qpu": {
+    "ionq-forte": {
+      "device": "ionq-forte",
+      "per_circuit": 80.3,
+      "per_adjudication": 2730.2,
+      "per_transaction": 16.487988483550435,
+      "total": 16487988.483550435
+    },
+    "aqt-ibex-q1": {
+      "device": "aqt-ibex-q1",
+      "per_circuit": 23.8,
+      "per_adjudication": 809.2,
+      "per_transaction": 4.886850883044837,
+      "total": 4886850.883044837
+    },
+    "quera-aquila": {
+      "device": "quera-aquila",
+      "per_circuit": 10.3,
+      "per_adjudication": 350.20000000000005,
+      "per_transaction": 2.1148976510656228,
+      "total": 2114897.651065623
+    },
+    "iqm-emerald": {
+      "device": "iqm-emerald",
+      "per_circuit": 1.9000000000000001,
+      "per_adjudication": 64.60000000000001,
+      "per_transaction": 0.390126751167445,
+      "total": 390126.751167445
+    },
+    "iqm-garnet": {
+      "device": "iqm-garnet",
+      "per_circuit": 1.75,
+      "per_adjudication": 59.5,
+      "per_transaction": 0.35932727081212035,
+      "total": 359327.27081212035
+    },
+    "rigetti-cepheus": {
+      "device": "rigetti-cepheus",
+      "per_circuit": 0.725,
+      "per_adjudication": 24.65,
+      "per_transaction": 0.14886415505073558,
+      "total": 148864.15505073557
+    }
+  },
+  "simulator_dm1": {
+    "device": "DM1",
+    "per_circuit": 0.00375,
+    "billed_seconds_per_circuit": 3.0,
+    "per_adjudication": 0.1275,
+    "per_transaction": 0.000769987008883115,
+    "total": 769.987008883115
+  },
+  "instances": {
+    "c6i.xlarge": {
+      "device": "c6i.xlarge",
+      "hourly": 0.17,
+      "adjudicator_hours": 2.5666233629437167,
+      "sieve_hours": 0.863222214522668,
+      "per_transaction": 5.830737481692855e-07,
+      "total": 0.5830737481692855
+    },
+    "g4dn.xlarge": {
+      "device": "g4dn.xlarge",
+      "hourly": 0.526,
+      "adjudicator_hours": 2.5666233629437167,
+      "sieve_hours": 0.863222214522668,
+      "per_transaction": 1.8040987737473184e-06,
+      "total": 1.8040987737473184
+    },
+    "g5.xlarge": {
+      "device": "g5.xlarge",
+      "hourly": 1.006,
+      "adjudicator_hours": 2.5666233629437167,
+      "sieve_hours": 0.863222214522668,
+      "per_transaction": 3.450424650931183e-06,
+      "total": 3.450424650931183
+    },
+    "p4d.24xlarge": {
+      "device": "p4d.24xlarge",
+      "hourly": 21.958,
+      "adjudicator_hours": 2.5666233629437167,
+      "sieve_hours": 0.863222214522668,
+      "per_transaction": 7.531254919000688e-05,
+      "total": 75.31254919000688
+    },
+    "p5.48xlarge": {
+      "device": "p5.48xlarge",
+      "hourly": 55.04,
+      "adjudicator_hours": 2.5666233629437167,
+      "sieve_hours": 0.863222214522668,
+      "per_transaction": 0.0001887787005837498,
+      "total": 188.7787005837498
+    }
+  },
+  "routing_saving_ratio": 165.5872093023256,
+  "shap_share_of_quantum_bill": 0.9411764705882353,
+  "fraud_value": {
+    "fraud_transactions": 1727.485630620034,
+    "fraud_in_band": 1123.5678898341685,
+    "value_in_band": 137312.7162051061,
+    "value_per_transaction": 0.1373127162051061
+  },
+  "reservation_hourly": {
+    "ionq-forte": 7000.0,
+    "aqt-ibex-q1": 4800.0,
+    "rigetti-cepheus": 4100.0,
+    "iqm-emerald": 4000.0,
+    "iqm-garnet": 3000.0,
+    "quera-aquila": 2500.0
+  }
+}
