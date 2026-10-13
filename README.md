@@ -64,6 +64,21 @@ python -m venv .venv
 Flags: `--quick` (reduced settings for a smoke test), `--synthetic` (force the offline
 dataset), `--epochs N`, `--backend braket-dm1|ionq-forte|iqm-garnet|rigetti-cepheus`.
 
+### Serverless build
+
+For hosting that cannot run Python, the dashboard can be built as a static page that
+replays a recorded run. The records are real model output — genuine sieve probabilities,
+VQC and QAE evaluations, and exact Shapley attributions — written out ahead of time
+rather than scored on request:
+
+```powershell
+.venv\Scripts\python scripts\export_static_demo.py --out build\static_demo
+.venv\Scripts\python scripts\build_static_site.py  --out build\static_demo
+```
+
+`build_static_site.py` derives the page from `app/static/index.html`, swapping only its
+data layer, so the two builds cannot drift apart in markup or styling.
+
 ## Architecture
 
 | Stage | What | How |
@@ -221,6 +236,8 @@ scripts/
   cost_report.py          price the mesh per backend and at volume
   validate_braket.py      re-run trained circuits on Braket DM1 or a QPU
   capture_screenshots.py  regenerate the README screenshots
+  export_static_demo.py   precompute a demo run from the trained models
+  build_static_site.py    derive the serverless dashboard build
 app/
   server.py       FastAPI demo server (real models, async quantum worker)
   static/         dashboard, no external dependencies
