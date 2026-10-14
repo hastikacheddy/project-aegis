@@ -5,6 +5,10 @@ the synchronous authorization path.
 
 Team Beerantum — HSBC Enterprise Challenge, 2026 Global Quantum + AI Challenge.
 
+**[Open the demo →](https://huggingface.co/spaces/Hastika06/project-aegis)** A recorded
+run of the mesh, replayed in the browser. Every value in it is real model output; run the
+server locally (below) to watch the models score live.
+
 ## Problem
 
 Payment authorization runs on a hard latency budget: 100–300 ms end to end, with the
